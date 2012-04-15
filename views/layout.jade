@@ -1,0 +1,104 @@
+!!!5
+head(lang='en')
+  meta(charset='utf-8')
+  script(src='//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js')
+  script(src='/sio/socket.io.js')
+
+  title Hello world
+
+  block head
+
+  :stylus
+
+    html, body
+      font-family: Helvetica, Arial, sans-serif
+      margin: 0
+      padding: 10px 30px
+
+    h1 small
+      font-size: .6em
+      font-weight: normal
+      color: #999
+
+    #messages
+      list-style: none
+      padding: 0
+      margin: 10px 0
+
+      li
+        margin: 0
+        padding: 5px 10px
+        border-bottom: 1px solid #eee
+      li:last-child
+        border-bottom: 0
+
+      time
+        font-size: 11px
+        color: #ccc
+        padding-right: 5px
+    
+    form
+      background: #eee
+      border-radius: 10px
+      padding: 10px
+
+body
+
+  block body
+
+  block scripts
+    script
+      function zeroPad (digits, n) {
+        n = n.toString();
+        while (n.length < digits)
+          n = '0'+n;
+        return n;
+      }
+
+      $(function(){
+
+        var socket = io.connect('', {
+          resource: './sio'
+        });
+
+        socket.on('_qob', function(data){
+          if (data.event === "change") {
+            if (data.action === "reload") {
+              window.location.reload();
+            }
+          }
+        });
+
+        var messages = $("#messages");
+        socket.on('chat', function(data){
+          if (data.message) {
+            var dt = new Date(data.time);
+            var time = zeroPad(2, dt.getHours())+':'+zeroPad(2, dt.getSeconds());
+            var html = '<li><time pubdate datetime="'+dt+'">'+time+"</time> "+
+              '<b>'+data.nick+'</b>: '+data.message+"</li>";
+            var message = $(html).hide().appendTo(messages);
+            message.show("fade");
+          }
+        });
+
+        socket.on('chatHistory', function(data){
+          var html = "";
+          $.each(data, function(i, data){
+            var dt = new Date(data.time);
+            var time = zeroPad(2, dt.getHours())+':'+zeroPad(2, dt.getSeconds());
+            console.log(data, time);
+            html += '<li><time pubdate datetime="'+dt+'">'+time+"</time> "+
+              '<b>'+data.nick+'</b>: '+data.message+"</li>";
+          });
+          messages.append(html);
+        });
+
+        $("form").submit(function(e){        
+          e.preventDefault();
+          var message = $(this).find("input[name=message]");
+          var nick = $(this).find("input[name=nick]");
+          socket.emit('chat', { nick: nick.val() || 'jdoe', message: message.val(), time: new Date() });
+          message.val("").focus();
+        });
+
+      });
