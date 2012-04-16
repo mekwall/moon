@@ -1,2 +1,7 @@
-.gitignore
-.bin
+.git*
+docs/
+examples/
+support/
+test/
+testing.js
+.DS_Store
