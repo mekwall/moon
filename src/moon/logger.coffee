@@ -1,41 +1,80 @@
 ###
-  moon.js
+  Moon.js
 ###
 
 # Dependencies
-require "colors"
 _s = require "underscore.string"
 utils = require "./utils"
 
+try
+  winston = require "winston"
+  winston.addColors
+      log: "white"
+      info: "cyan"
+      warn: "yellow"
+      error: "red"
+      debug: "yellow"
+
+  ###
+  transport = new (winston.transports.Console)(
+    colorize: true,
+    prettyPrint: true,
+    handleExceptions: false
+    timestamp: () -> return utils.timeString() 
+  )
+
+  @logger = new winston.Logger
+    exitOnError: false,
+    transports: [
+      transport
+    ]
+
+  @logger.setLevels winston.config.npm.levels
+  ###
+
 ###
-Logger
-@api public
+  Logger
 ###
 module.exports = class Logger
 
+  # Private variables
   levels = [ "log", "error", "warn", "info", "debug" ]
 
-  colors = [ "white", "red", "yellow".bold, "cyan", "yellow" ]
+  # Public variables
+  colors: [ "white", "red", "yellow".bold, "cyan", "yellow" ]
+  level: 6
 
-  level: 5
-
+  ###
+    Constructor
+  ###
   constructor: (@name, @opts = {}) ->
     @env = @opts.env || (process.env.NODE_ENV || "development")
     unless @opts.level
-      @level = 4 if @env is "production"
+      @level = 3 if @env is "production"
+      @level = 6 if @env is "development"
+      @level = 6 if @env is "test"
     else
       @level = @opts.level
     @enabled = true
+    @
 
+  ###
+    New line
+  ###
   newLine: (num=1) ->
     console.log _s.repeat "\n", num-1
 
+  ###
+    Log message
+  ###
   log: (message..., type) ->
     index = levels.indexOf(type)
     return this if index > @level or not @enabled
     time = utils.timeString()
     if @env is "development"
-      output = [ ("\ " + time + "").grey, "".grey + @name.grey + ".".grey + type[colors[index]] + " >".grey ].concat(message)
+      sp1 = "         ".split(" ").slice(@name.length).join(" ")
+      sp2 = "      ".split(" ").slice(type.length).join(" ")
+      output = [ ("\ " + time + "").grey, "".grey + @name.white + sp1 + type[@colors[index]] + sp2 + ">".grey ].concat(message)
     else
       output = [ ("\ " + time + ""), "" + @name + "." + type + " >" ].concat(message)
     unless console[type]
@@ -44,6 +83,9 @@ module.exports = class Logger
     type = "log" if type is "debug"
     console[type].apply console, output
 
+  ###
+    Error handler
+  ###
   error: (message, error) ->
     if error and error.stack
       error = error.stack
@@ -52,6 +94,10 @@ module.exports = class Logger
       message += "\n"
     @log.apply this, [message, error || ""].concat([ "error" ])
 
+
+  ###
+    Create methods for each level
+  ###
   levels.forEach (name) ->
     return if name is "log"
     return if name is "error"

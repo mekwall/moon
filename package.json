@@ -5,7 +5,7 @@
     "framework",
     "real-time"
   ],
-  "version": "0.0.1",
+  "version": "0.0.2",
   "authors": [
     {
       "name": "Marcus Ekwall",
@@ -27,23 +27,24 @@
     }
   ],
   "bugs": {
-    "url": "git://github.com/mekwall/qob/issues"
+    "url": "git://github.com/mekwall/moon/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/mekwall/qob.git"
+    "url": "git://github.com/mekwall/moon.git"
   },
   "directories": {
     "lib": "./lib"
   },
   "bin": {
-    "qob": "./bin/qob"
+    "moon": "./bin/moon"
   },
   "scripts": {
     "install": ""
   },
   "dependencies": {
-    "coffee-script": ">= 1.3.1",
+    "http-proxy": ">= 0.8.x",
+    "iced-coffee-script": ">= 1.3.x",
     "colors": ">= 0.6.0",
     "fs-extra": ">= 0.0.4",
     "temp": ">= 0.4.0",
@@ -53,11 +54,16 @@
     "redis": ">= 0.7.1",
     "connect": ">= 2.1.2",
     "connect-redis": ">= 1.3.0",
-    "socket.io": ">= 0.9.5",
+    "socket.io": "git://github.com/LearnBoost/socket.io.git",
     "director": "git://github.com/flatiron/director.git",
     "jade": ">= 0.24.0",
     "stylus": ">= 0.25.0",
     "nib": ">= 0.4.0"
+  },
+  "optionalDependencies": {
+    "spdy": ">= 1.2.0",
+    "js-yaml": ">= 0.3.7",
+    "winston": "git://github.com/mekwall/winston.git"
   },
   "devDependencies": {
     "docco": ">= 0.3.0",

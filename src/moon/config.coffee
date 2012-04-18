@@ -1,5 +1,5 @@
 ###
-  qob
+  Moon.js
 ###
 
 # Dependencies
@@ -36,18 +36,27 @@ module.exports = class Config
     JSON and YAML is supported
   ###
   loadFromFile: (file) ->
-    ext = path.extname(file).replace(".","")
+    ext = file.split(".").pop()
+    unless ext
+      ext = "json"
+      file = file+".json"
     accepted = "js,json,yml,yaml".split(",")
 
     unless accepted.indexOf ext
-      logger.error "Unknown file type"
+      logger.error "Unknown config file type"
+      process.exit 0
 
-    config = fs.readFileSync file
-    switch ext
-      when "js", "json"
-        config = JSON.parse config
-      when "yml", "yaml"
-        config = require("yaml").parse config
+    try
+      config = fs.readFileSync file
+      switch ext
+        when "js", "json"
+          config = JSON.parse config
+        when "yml", "yaml"
+          yaml = require "js-yaml"
+          await yaml.loadAll config, defer config
+    catch e
+      logger.error "Could not read/parse config file"
+      process.exit 0
 
     for env, cfg of config
       @set env, config[env]

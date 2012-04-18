@@ -133,7 +133,7 @@ class CssDiff extends Diff
   constructor: (@ignoreWhitespace = true) ->
 
   tokenize: (value) ->
-    removeEmpty value.split(/([{}:;,]|\s+)/g)
+    removeEmpty value.split(/([^{]+\s*\{\s*[^}]+)\s*}/g)
 
 class LineDiff extends Diff
 
@@ -164,6 +164,9 @@ module.exports =
 
   diffCss: (oldStr, newStr) ->
     new CssDiff().diff oldStr, newStr
+
+  diffHtml: (oldStr, newStr) ->
+    new HtmlDiff().diff oldStr, newStr
 
   createPatch: (fileName, oldStr, newStr, oldHeader, newHeader) ->
     ret = []
