@@ -1,0 +1,21 @@
+extends layout
+
+block title
+  title Error
+
+block body
+
+  if error
+    if error.name
+      h1= error.name
+    if error.h3
+      h3= error.message
+
+    if error.stack
+      h4 Stack trace:
+      pre=error.stack
+  else
+    h1 Unknown error
+    h3 Something bad happened... 
+
+block scripts

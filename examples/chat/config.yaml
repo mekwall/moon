@@ -1,0 +1,14 @@
+production:
+  cluster: false
+  workers: 1
+  redis:
+    db: moon
+    host: my.awesome.redis.host
+    port: 1000
+    pass: password
+
+development:
+  cluster: true
+  workers: 1
+  redis:
+    host: localhost
