@@ -17,7 +17,7 @@ diff      = require "./diff"
 stylus    = require "stylus"
 jade      = require "jade"
 
-prettydiff  = require "./prettydiff"
+#prettydiff  = require "./prettydiff"
 
 # Import classes
 Logger = require "./logger"

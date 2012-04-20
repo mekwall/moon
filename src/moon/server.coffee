@@ -10,24 +10,32 @@ httpProxy = require "http-proxy"
 io = require "socket.io"
 redis = require "redis"
 director = require "director"
-nib = require "nib"
-stylus = require "stylus"
 
 # Import classes
 Logger = require "./logger"
-Session = require "./session"
-ConnectSession = connect.middleware.session.Session
 
 # Import functions
 parseCookie = connect.utils.parseCookie
 parseSignedCookies = connect.utils.parseSignedCookies
 
 # apply some patches to response object
+# based on the connect patch
 res = http.ServerResponse.prototype
 do ->
   setHeader = res.setHeader
   _renderHeaders = res._renderHeaders
   writeHead = res.writeHead
+
+  unless res._hasMoonPatch
+    res.__defineGetter__ "protocol", () ->
+      if req.isHttps
+        return "HTTPS"
+      else if req.isSpdy
+        return "SPDY"
+      else
+        return "HTTP"
+
+    res._hasMoonPatch = true
   
   unless res._hasConnectPatch
     res.__defineGetter__ "headerSent", () ->
@@ -81,7 +89,6 @@ class Server
     Constructor
   ###
   constructor: (@app) ->
-    @app.server = @
     @init()
     @
 
@@ -99,14 +106,8 @@ class Server
           port: @app.options.http.port || 3000
 
       # HTTP
-      @http = httpProxy.createServer (req, res) =>
+      @http = http.createServer (req, res) =>
         if @app.env is "development"
-          if req.isHttps
-            req.procotol = "HTTPS"
-          else if req.isSpdy
-            req.protocol = "SPDY"
-          else
-            req.protocol = "HTTP"
           logger.debug "#{req.protocol} request: #{req.method} #{req.url.bold}"
 
         if req.url is "/favicon.ico"
@@ -151,16 +152,9 @@ class Server
           @proxy.proxyRequest req, res
 
       @use connect.bodyParser()
-      @use stylus.middleware src: @app.options.paths.static, compile: (str, path) ->
-        stylus(str)
-          .set("filename", path)
-          .set("warn", true)
-          .set("compress", false)
-          .use(nib())
-
-      #@use connect.compress()
+      @use @app.assets.middleware()
       @use connect.cookieParser @app.options.cookies.secret
-      @use connect.static @app.options.paths.static
+      @use @app.session.middleware()
 
     @initialized = true
     this
@@ -205,6 +199,9 @@ class Server
     Attach middlewares
   ###
   use: (fn) ->
+    unless fn
+      logger.debug "Nothing was passed to use()"
+      @
 
     # wrap sub-apps
     if typeof fn.handle is "function"
@@ -300,9 +297,6 @@ class Server
     else if @spdy
       @spdy.listen @app.options.spdy.port or 3443, @app.options.spdy.host or null
     
-    # Create session
-    @session = new Session @app
-    
     # Create redis clients
     subClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
     redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
@@ -345,24 +339,20 @@ class Server
       "log level": 1
     )
 
-    sessionStore = @session.sessionStore
-    sessionLogger = @session.logger
     secret = @app.options.cookies.secret
-    @sockets.set "authorization", (data, response) ->
+    @sockets.set "authorization", (data, response) =>
       if data.headers.cookie
         data.cookie = parseCookie data.headers.cookie
         data.cookie = parseSignedCookies data.cookie, secret
         data.sessionID = data.cookie["moon.sid"]
         socketLogger.debug "Handshake: ID:" + data.sessionID
         try
-          sessionStore.get data.sessionID, (err, session) ->
-            if !session or err
+          @app.session.get data.sessionID, data, (session) ->
+            unless session
               socketLogger.debug "Handshake failed: ID:" + data.sessionID
               response "AUTH_ERROR", false
             else
-              # create a session object, passing data as request and our
-              # just acquired session data
-              data.session = new ConnectSession data, session
+              data.session = session
               socketLogger.debug "Authenticated: ID:" + data.sessionID
               response null, true
         catch e
@@ -372,24 +362,20 @@ class Server
       else
         return response "MISSING_COOKIE", false
 
-    @sockets
-      .configure "production", ->
-        @enable "browser client etag"
-        @enable "browser client minification"
-        @enable "broswer client gzip"
-        transports = [
-          "websocket", 
-          #"flashsocket",
-          #"htmlfile",
-          "xhr-polling",
-          "jsonp-polling"
-        ]
-        @set "transports", transports
-        socketLogger.info "Transports enabled:", transports.join ", "
-      .configure "development", ->
-        transports = [ "websocket" ]
-        @set "transports", transports
-        socketLogger.info "Transports enabled:", transports.join ", "
+    # default transport
+    transports = [ "websocket" ]
+
+    unless @app.env in [ "development", "testing" ]
+      # enable etag, minification and gzip for production
+      @sockets
+        .enable( "browser client etag" )
+        .enable( "browser client minification" )
+        .enable( "broswer client gzip" )
+      # add additional transports
+      transports.concat [ "websocket", "xhr-polling", "jsonp-polling" ]
+
+    @sockets.set "transports", transports
+    socketLogger.info "Transports enabled:", transports.join ", "
 
     if @https
       @sockets.on "upgrade", (req, socket, head) ->

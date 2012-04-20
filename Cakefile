@@ -1,13 +1,27 @@
 {spawn, exec} = require 'child_process'
+testutil = require 'testutil'
+growl = require 'growl'
 
 option '-p', '--prefix [DIR]', 'set the installation prefix for `cake install`'
 option '-w', '--watch', 'continually build qob framework'
 
-task 'build', 'build the qob framework', (options) ->
+task 'test', 'test project', (options) ->
+  process.env.NODE_ENV = 'testing'
+  testutil.fetchTestFiles './test', (files) ->
+    files.unshift '--colors'
+    if options.grep?
+      files.unshift options.grep
+      files.unshift '--grep'
+    
+    mocha = spawn 'mocha', files#, customFds: [0..2]
+    mocha.stdout.pipe(process.stdout, end: false);
+    mocha.stderr.pipe(process.stderr, end: false);
+
+task 'build', 'build moon.js', (options) ->
   coffee = spawn 'coffee', ['-c' + (if options.watch then 'w' else ''), '-o', 'lib', 'src']
   coffee.stdout.on 'data', (data) -> console.log data.toString().trim()
 
-task 'install', 'install the `qob` command into /usr/local (or --prefix)', (options) ->
+task 'install', 'install the `moon` command into /usr/local (or --prefix)', (options) ->
   base = options.prefix or '/usr/local'
   lib  = base + '/lib/qob'
   exec([

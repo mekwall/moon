@@ -1,5 +1,5 @@
 compile:
-	./node_modules/coffee-script/bin/coffee -bw -o ./lib -c ./src
+	./node_modules/iced-coffee-script/bin/coffee -bw -o ./lib -c ./src
 
 MOCHA_TESTS := $(shell find test/ -name '*.mocha.coffee')
 MOCHA := ./node_modules/mocha/bin/mocha

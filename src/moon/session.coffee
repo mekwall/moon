@@ -9,53 +9,85 @@ connectRedis = require "connect-redis"
 
 # Import classes
 Logger = require "./logger"
-RedisStore = connectRedis connect
-ConnectSession = connect.middleware.session.Session
+RedisStore = connectRedis(connect)
+ConnectSession = connect.middleware.session
 
+###
+  Session
+###
 class Session
 
-  # Public variables
-  sessionStore: null
-  logger: new Logger "session"
+  # Private variables
+  sessionStore = null
+  logger = new Logger "session"
 
+  ###
+    Constructor
+  ###
   constructor: (@app) ->
-    @server = @app.server
     @init()
     this
 
-  init: () ->
+  ###
+    Init
+  ###
+  init: ->
     # Create redis client
     redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
 
     # If there's a password, use it
     if @app.options.redis.pass
-      redisClient.auth @app.options.redis.pass, (err) =>
+      redisClient.auth @app.options.redis.pass, (err) ->
         if err then logger.error("redis:", err)
 
-    redisClient.on "error", (err) =>
-      if err.toString().match "ECONNREFUSED"
-        @logger.error "redis: Connection refused. Server down?"
-      else
-        @logger.error "redis: Unknown error", err
+    # bind some events
+    redisClient
+      .on "error", (err) ->
+        if err.toString().match "ECONNREFUSED"
+          logger.error "redis: Connection refused. Server down?"
+        else
+          logger.error "redis: Unknown error", err
 
-    redisClient.on "end", () =>
-      @logger.debug "redis: Connection closed"
+      .on "end", () ->
+        logger.debug "redis: Connection closed"
 
-    redisClient.on "ready", () =>
-      @logger.info "redis: Ready to recieve commands"
+      .on "ready", () ->
+        logger.info "redis: Ready to recieve commands"
       
     # Create session store
-    @sessionStore = new RedisStore client: redisClient
+    sessionStore = new RedisStore client: redisClient
 
-    # Add session to connect
-    @server.use(
-      connect.session(
-        cookie:
-          httpOnly: false
-          maxAge: @app.options.sessions.maxAge || null
-        store: @sessionStore
-        key: @app.options.sessions.key || "moon.sid"
-      )
+  ###
+    Middleware
+  ###
+  middleware: ->    
+    return connect.session(
+      cookie:
+        httpOnly: false
+        #maxAge: @app.options.sessions.maxAge || 0
+      store: sessionStore
+      key: @app.options.sessions.key || "moon.sid"
     )
+
+
+  ###
+    Get session
+    @param id session id
+    @param req requeat
+    @param cb callback
+  ###
+  get: (id, req, cb) ->
+    sessionStore.load id, (err, session) =>
+      unless session
+        logger.error "Could not find session: " + id
+        return cb(false)
+
+      session.save = (cb) ->
+        sessionStore.set(id, session, cb)
+
+      # create a session object, passing data as request and our
+      # just acquired session data
+      if req then session = new ConnectSession req, session
+      cb session
 
 module.exports = Session

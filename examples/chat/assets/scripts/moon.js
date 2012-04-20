@@ -1,10 +1,3 @@
-function zeroPad (digits, n) {
-  n = n.toString();
-  while (n.length < digits)
-    n = '0'+n;
-  return n;
-}
-
 $(function(){
   var socket = window.socket = io.connect('', {
     resource: './sio'

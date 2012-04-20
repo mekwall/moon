@@ -1,18 +1,16 @@
-!!!5
-head(lang='en')
-  meta(charset='utf-8')
-  script(src='//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js')
-  script(src='/sio/socket.io.js')
-
+!!!
+head(lang="en")
+  meta(charset="utf-8")
   block title
-    title Moon.js Chat Example
-
-  link(rel="stylesheet", href="/css/chat.css")
-
+    title Moon.js real-time chat example
+  != css("base")
   block head
 body
 
   block body
 
   block scripts
-    script(src="/js/moon.js")
+    script(src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js")
+    script(src="/sio/socket.io.js")
+    != js("base")
+    != jst("base")

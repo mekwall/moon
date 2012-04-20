@@ -14,6 +14,8 @@ jade = require "jade"
 Config  = require "./moon/config"
 Logger  = require "./moon/logger"
 Watcher = require "./moon/watcher"
+Assets  = require "./moon/assets"
+Session = require "./moon/session"
 Server  = require "./moon/server"
 Template = require "./moon/template"
 
@@ -40,6 +42,8 @@ class Application
 
   ###
     Constructor
+    @param options
+    @param env defaults to development
   ###
   constructor: (options, @env = process.env.NODE_ENV || "development") ->
 
@@ -47,6 +51,7 @@ class Application
     @config = new Config()
 
     # Add defaults
+    cwd = process.cwd()
     @config.defaults(
         cluster: false,
         workers: null,
@@ -61,10 +66,11 @@ class Application
         sockets:
           resource: "/sio"
         paths:
-          app: path.resolve process.cwd()
-          static: path.resolve process.cwd() + "/public"
-          views: path.resolve process.cwd() + "/views"
-          favicon: path.resolve process.cwd() + "/public/favicon.ico"
+          app: path.resolve cwd
+          static: path.resolve cwd + "/public"
+          views: path.resolve cwd + "/views"
+          favicon: path.resolve cwd + "/public/favicon.ico"
+          assets: path.resolve cwd + "/assets"
         cookies:
           secret: "natural satellite"
         sessions:
@@ -100,9 +106,16 @@ class Application
     # Create server
     if (!@options.cluster || @cluster.isWorker)
 
+      # Asset manager
+      @assets = new Assets @
+
+      # Session handler
+      @session = new Session @
+
+      # Server
       @server = new Server @
 
-      # Create router
+      # Router
       @router = new director.http.Router().configure @options.router
 
     # Instantiate template engine
@@ -115,6 +128,7 @@ class Application
   ###
     Shortcut to server .use
     Registers a middleware
+    @param fn
   ###
   use: (fn) ->
     if @server
@@ -122,6 +136,8 @@ class Application
 
   ###
     Configure
+    @param env
+    @param opts
   ###
   configure: (env, opts) ->
     unless env then return @options
@@ -132,6 +148,7 @@ class Application
 
   ###
     Load config from file
+    @param file
   ###
   loadConfig: (file) ->
     @config.loadFromFile file
@@ -140,6 +157,8 @@ class Application
 
   ###
     Shorthand to register a get route
+    @param pattern
+    @param cb
   ###
   get: (pattern, cb) ->
     @init() unless @initialized
@@ -149,6 +168,8 @@ class Application
 
   ###
     Shorthand to register a post route
+    @param pattern
+    @param cb
   ###
   post: (pattern, cb) ->
     @init() unless @initialized
@@ -157,6 +178,8 @@ class Application
 
   ###
     Shorthand to register scoped route
+    @param pattern
+    @param path
   ###
   path: (pattern, path) ->
     @init() unless @initialized
@@ -171,14 +194,21 @@ class Application
 
   ###
     Add multiple routes
+    @param routes
   ###
   routes: (routes) ->
     @init() unless @initialized
     if @router
+      if typeof routes is "string"
+        try
+          routes = require process.cwd() + "/" + routes
+        catch e
+          return logger.error "Could not load routes:", e
       @router.mount routes
 
   ###
     Add host
+    @param host
   ###
   addHost: (host) ->
 
@@ -196,6 +226,8 @@ class Application
 
   ###
     Command application
+    @param cmd
+    @param args
   ###
   command: (cmd, args...) ->
 
@@ -210,6 +242,7 @@ class Application
 
   ###
     Start application
+    @param start
   ###
   start: () ->
     @init() unless @initialized
@@ -313,33 +346,62 @@ class Application
       
       self = @
       renderTemplate = (template, options = {}) ->
-        res = this.res
         unless template.match(/.jade/i)
           template = template + ".jade"
         file = path.resolve self.options.paths.views + "/" + template
         unless path.existsSync file
-          res.writeHead 500
-          res.end "Template does not exist"
+          @error new Error("Template does not exist")
         else
-          jade.renderFile file, options, (err, html) ->
+          options.css = (pkg) -> self.assets.css pkg
+          options.js = (pkg) -> self.assets.js pkg
+          options.jst = (pkg) -> self.assets.jst pkg
+          jade.renderFile file, options, (err, html) =>
             if err
-              res.writeHead 500
-              res.end err.stack
+              logger.error "Error occured: ", err
+              @error err 
             else
-              res.writeHead 200
-              res.end html
+              @send html
 
-      @router.attach () ->
+      # Attach methods to router
+      @router.attach ->
+
+        @error = (error, status=500) ->
+          @res.writeHead status
+          data =
+            title: "Internal Server Error"
+            error: error
+            css: (pkg) -> self.assets.css pkg
+            js: (pkg) -> self.assets.js pkg
+            jst: (pkg) -> self.assets.jst pkg
+          jade.renderFile self.options.paths.views + "/error.jade", data, (err, html) =>
+              if err then console.log err
+              if err then @res.end err.stack else @res.end html
+
+        @send = (data, status=200) ->
+          if typeof data is "object"
+            @json(data)
+          else
+            if self.env is "development"
+              @res.setHeader("Expires", "-1");
+              @res.setHeader("Cache-Control", "private, max-age=0")
+            @res.setHeader("Content-Type", "text/html; charset=UTF-8")
+            @res.writeHead status
+            @res.end data
+
+        @json = (data, status=200) ->
+          @res.writeHead status
+          @res.setHeader("Content-Type", "application/json; charset=UTF-8")
+          @res.end JSON.stringify(data)
         @render = renderTemplate
 
       # Dispatch router on request
       @server.use (req, res, next) =>
         @router.dispatch req, res, (err) ->
-          return next() unless err
+          return do next unless err
           res.statusCode = 404
           next req.url+" not found"
 
-      @server.listen()
+      do @server.listen
 
 
 utils.addChaining(

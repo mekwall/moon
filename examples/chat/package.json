@@ -1,0 +1,30 @@
+{
+  "name": "moon-chat",
+  "description": "real-time chat example",
+  "version": "0.0.1",
+  "authors": [
+    {
+      "name": "Marcus Ekwall",
+      "email": "marcus.ekwall@gmail.com",
+      "web": "http://www.writeless.se"
+    }
+  ],
+  "maintainers": [
+    {
+      "name": "Marcus Ekwall",
+      "email": "marcus.ekwall@gmail.com",
+      "web": "http://www.writeless.se"
+    }
+  ],
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://opensource.org/licenses/mit-license.php"
+    }
+  ],
+  "dependencies": {
+    "moon": "git://github.com/mekwall/moon.git",
+  },
+  "engines": {
+    "node": ">= 0.6.x"
+  }

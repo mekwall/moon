@@ -41,7 +41,7 @@ module.exports = class Logger
   levels = [ "log", "error", "warn", "info", "debug" ]
 
   # Public variables
-  colors: [ "white", "red", "yellow".bold, "cyan", "yellow" ]
+  colors: [ "white", "red", "yellow", "green", "cyan" ]
   level: 6
 
   ###
