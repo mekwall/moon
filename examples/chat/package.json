@@ -23,8 +23,9 @@
     }
   ],
   "dependencies": {
-    "moon": "git://github.com/mekwall/moon.git",
+    "moon": "git://github.com/mekwall/moon.git"
   },
   "engines": {
     "node": ">= 0.6.x"
   }
+}
