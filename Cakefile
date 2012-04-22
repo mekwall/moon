@@ -3,7 +3,7 @@ testutil = require 'testutil'
 growl = require 'growl'
 
 option '-p', '--prefix [DIR]', 'set the installation prefix for `cake install`'
-option '-w', '--watch', 'continually build qob framework'
+option '-w', '--watch', 'continually build moon.js'
 
 task 'test', 'test project', (options) ->
   process.env.NODE_ENV = 'testing'
@@ -23,16 +23,16 @@ task 'build', 'build moon.js', (options) ->
 
 task 'install', 'install the `moon` command into /usr/local (or --prefix)', (options) ->
   base = options.prefix or '/usr/local'
-  lib  = base + '/lib/qob'
+  lib  = base + '/lib/moon'
   exec([
     'mkdir -p ' + lib
     'cp -rf bin README resources vendor lib ' + lib
-    'ln -sf ' + lib + '/bin/qob ' + base + '/bin/qob'
+    'ln -sf ' + lib + '/bin/moon ' + base + '/bin/moon'
   ].join(' && '), (err, stdout, stderr) ->
    if err then console.error stderr
   )
 
-task 'doc', 'rebuild the qob documentation', ->
+task 'doc', 'rebuild the moon documentation', ->
   exec([
     'bin/docco src/docco.coffee'
     'sed "s/docco.css/resources\\/docco.css/" < docs/docco.html > index.html'

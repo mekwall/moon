@@ -69,14 +69,17 @@
     "socket.io": "git://github.com/LearnBoost/socket.io.git",
     "director": "git://github.com/flatiron/director.git"
   },
-  "optionalDependencies": {},
-  "devDependencies": {
+  "optionalDependencies": {
     "spdy": "1.2.x",
-    "docco": "0.3.x",
     "js-yaml": "0.3.x",
-    "winston": "0.5.x",
+    "winston": "0.5.x"
+  },
+  "devDependencies": {
+    "docco": ">= 0.3.x",
+    "testutil": ">= 0.1.x",
+    "growl": ">= 1.5.1",
     "mocha": ">= 1.0.1",
-    "require-analyzer": "0.4.x.-3"
+    "require-analyzer": ">= 0.4.x"
   },
   "engines": {
     "node": ">= 0.6.15"
