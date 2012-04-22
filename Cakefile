@@ -18,7 +18,7 @@ task 'test', 'test project', (options) ->
     mocha.stderr.pipe(process.stderr, end: false);
 
 task 'build', 'build moon.js', (options) ->
-  coffee = spawn 'coffee', ['-c' + (if options.watch then 'w' else ''), '-o', 'lib', 'src']
+  coffee = spawn './node_modules/iced-coffee-script/bin/coffee', [(if options.watch then 'w' else ''), '-o', './lib', '-c', './src']
   coffee.stdout.on 'data', (data) -> console.log data.toString().trim()
 
 task 'install', 'install the `moon` command into /usr/local (or --prefix)', (options) ->
