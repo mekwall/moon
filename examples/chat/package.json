@@ -1,7 +1,7 @@
 {
   "name": "moon-chat",
   "description": "real-time chat example",
-  "version": "0.0.1",
+  "version": "0.0.1-2",
   "authors": [
     {
       "name": "Marcus Ekwall",
@@ -27,5 +27,9 @@
   },
   "engines": {
     "node": ">= 0.6.x"
+  },
+  "subdomain": "moon-chat",
+  "scripts": {
+    "start": "app.js"
   }
 }

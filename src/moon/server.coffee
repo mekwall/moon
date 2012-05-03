@@ -301,6 +301,33 @@ class Server
     subClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
     redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
 
+    # Bind some events
+    subClient
+      .on "error", (err) ->
+        if err.toString().match "ECONNREFUSED"
+          socketLogger.error "redis: Connection refused. Server down?"
+        else
+          socketLogger.error "redis: Unknown error", err
+
+      .on "end", ->
+        socketLogger.debug "redis: Connection closed"
+
+      .on "ready", ->
+        socketLogger.info "redis: Ready to recieve commands"
+
+    redisClient
+      .on "error", (err) ->
+        if err.toString().match "ECONNREFUSED"
+          socketLogger.error "redis: Connection refused. Server down?"
+        else
+          socketLogger.error "redis: Unknown error", err
+
+      .on "end", ->
+        socketLogger.debug "redis: Connection closed"
+
+      .on "ready", ->
+        socketLogger.info "redis: Ready to recieve commands"
+
     if @app.options.redis.pass
       subClient.auth @app.options.redis.pass, (err) =>
         if err then socketLogger.error "redis:", err
@@ -313,31 +340,12 @@ class Server
       redisClient: redisClient
     )
 
-    subClient.on "error", (err) ->
-      if err.toString().match "ECONNREFUSED"
-        socketLogger.error "redis: Connection refused. Server down?"
-      else
-        socketLogger.error "redis: Unknown error", err
-
-    redisClient.on "error", (err) ->
-      if err.toString().match "ECONNREFUSED"
-        socketLogger.error "redis: Connection refused. Server down?"
-      else
-        socketLogger.error "redis: Unknown error", err
-
-    redisClient.on "end", ->
-      socketLogger.debug "redis: Connection closed"
-
-    redisClient.on "ready", ->
-      socketLogger.info "redis: Ready to recieve commands"
-
-    @sockets = io.listen(@http,
+    @sockets = io.listen @http,
       store: @socketStore
       resource: @app.options.sockets.resource || "/sio"
       logger: logger
       error: logger
       "log level": 1
-    )
 
     secret = @app.options.cookies.secret
     @sockets.set "authorization", (data, response) =>

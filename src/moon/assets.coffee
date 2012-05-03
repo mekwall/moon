@@ -11,6 +11,7 @@ coffee = require "iced-coffee-script"
 styl = require "stylus"
 nib = require "nib"
 jade = require "jade"
+ck = require "coffeekup"
 sqwish = require "sqwish"
 csso = require "csso"
 uglifyjs = require "uglify-js"
@@ -21,16 +22,16 @@ rimraf = require "rimraf"
 mime = require "mime"
 
 # Include functions
-utils = require("connect").utils
-exec = require("child_process").exec
-parse = require("url").parse
+{utils} = require "connect"
+{exec} = require "child_process"
+{parse} = require "url"
 extname = path.extname
 basename = path.basename
 normalize = path.normalize
 
 # Include classes
 Logger = require "./logger"
-Buffer = require("buffer").Buffer
+{Buffer} = require "buffer"
 
 ###
   decodeURIComponent.
@@ -73,9 +74,12 @@ preprocessors =
 ###
 #metamorph = 0
 templateParsers =
+  # Coffeekup
+  ".coffee": (contents, filename) ->
+    ck.compile contents, locals: no
   # Jade
   ".jade": (contents, filename) ->
-    compiled = jade.compile contents, client: true, compileDebug: false, filename: filename
+    compiled = jade.compile contents, client: yes, compileDebug: no, filename: filename
     ###
     cmp = compiled.toString()
     replaced = cmp.replace(
@@ -461,11 +465,7 @@ class Assets
       contents = fs.readFileSync(filename).toString()
       ext = extname filename
       contents = if @templateParsers[ext]? then @templateParsers[ext](contents, filename) else contents
-      # Templates in a 'templates' folder are namespaced by folder after 'templates'
-      if filename.indexOf('templates') > -1
-        namespace = filename.split('templates')[-1..][0].replace /^\/|\..*/g, ''
-      else
-        namespace = filename.split('/')[-1..][0].replace /^\/|\..*/g, ''
+      namespace = basename filename, extname filename
       tmplFileContents += "window.moon.jst['#{namespace}'] = #{contents};\n"
     tmplFileContents
 

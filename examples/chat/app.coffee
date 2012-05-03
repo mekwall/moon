@@ -32,7 +32,7 @@ module.exports = (app) ->
         "./assets/styles/*"
       ]
       # client-side template bundles
-      jst: base: "./views/client/*"
+      jst: base: "./views/client/chat-message.jade"
 
     # listen for new socket connections
     app.server.sockets.on "connection", (socket) ->

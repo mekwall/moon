@@ -9,7 +9,7 @@ connectRedis = require "connect-redis"
 
 # Import classes
 Logger = require "./logger"
-RedisStore = connectRedis(connect)
+RedisStore = connectRedis connect
 ConnectSession = connect.middleware.session
 
 ###
@@ -32,6 +32,7 @@ class Session
     Init
   ###
   init: ->
+
     # Create redis client
     redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
 
@@ -79,7 +80,7 @@ class Session
   get: (id, req, cb) ->
     sessionStore.load id, (err, session) =>
       unless session
-        logger.error "Could not find session: " + id
+        logger.error "Session not found in store: " + id
         return cb(false)
 
       session.save = (cb) ->

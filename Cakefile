@@ -34,7 +34,7 @@ task 'install', 'install the `moon` command into /usr/local (or --prefix)', (opt
 
 task 'doc', 'rebuild the moon documentation', ->
   exec([
-    'bin/docco src/docco.coffee'
+    './node_modules/docco/bin/docco ./src/docco.coffee'
     'sed "s/docco.css/resources\\/docco.css/" < docs/docco.html > index.html'
     'rm -r docs'
   ].join(' && '), (err) ->
