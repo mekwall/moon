@@ -39,6 +39,7 @@ module.exports = class Logger
 
   # Private variables
   levels = [ "log", "error", "warn", "info", "debug" ]
+  loggers = []
 
   # Public variables
   colors: [ "white", "red", "yellow", "green", "cyan" ]
@@ -48,6 +49,7 @@ module.exports = class Logger
     Constructor
   ###
   constructor: (@name, @opts = {}) ->
+    loggers.push @name
     @env = @opts.env || (process.env.NODE_ENV || "development")
     unless @opts.level
       @level = 3 if @env is "production"
@@ -68,11 +70,12 @@ module.exports = class Logger
     Log message
   ###
   log: (message..., type) ->
-    index = levels.indexOf(type)
+    index = levels.indexOf type
     return this if index > @level or not @enabled
     time = utils.timeString()
+    spacing = (loggers.reduce (a, b) -> a.length > b.length ? a : b).length + 1
     if @env is "development"
-      sp1 = "         ".split(" ").slice(@name.length).join(" ")
+      sp1 = _s.repeat(" ", spacing).split(" ").slice(@name.length).join(" ")
       sp2 = "      ".split(" ").slice(type.length).join(" ")
       output = [ ("\ " + time + "").grey, "".grey + @name.white + sp1 + type[@colors[index]] + sp2 + ">".grey ].concat(message)
     else
