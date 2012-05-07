@@ -3,9 +3,9 @@ production:
   workers: 1
   redis:
     db: moon
-    host: my.awesome.redis.host
-    port: 1000
-    pass: password
+    host: drum.redistogo.com
+    port: 9200
+    pass: e66582e95e16930b94c7d0597b31dc5e
 
 development:
   cluster: true

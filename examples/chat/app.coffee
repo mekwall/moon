@@ -17,7 +17,7 @@ module.exports = (app) ->
   app.start()
 
   # only do the following if a worker
-  if app.cluster.isWorker
+  if !app.options.cluster || app.cluster.isWorker
 
     # add bundles to asset manager
     app.assets.add
