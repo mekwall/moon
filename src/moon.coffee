@@ -260,6 +260,10 @@ class Application
         banner += "     real-time framework for node  ".grey+"|___| ".cyan.bold + ("v" + pkg.version).grey
         console.log banner
         logger.newLine 1
+      else
+        logger.newLine 1
+        console.log " moon v"+pkg.version
+        logger.newLine 1
       logger.info "Running on node", process.version
       logger.info "Environment:", @env
 
@@ -317,26 +321,27 @@ class Application
 
     else
 
-      # If this is a cluster worker
-      if @cluster.isWorker
-        process.on "message", (msg) =>
-          switch msg.cmd
-            when "pushToSockets" then @server.pushToSockets msg.data
-            when "stop", "restart" then process.exit(0)
-      else
-        process
-          .on "restart", () =>
-            @restart()
+      if @options.cluster is true
+        # If this is a cluster worker
+        if @cluster.isWorker
+          process.on "message", (msg) =>
+            switch msg.cmd
+              when "pushToSockets" then @server.pushToSockets msg.data
+              when "stop", "restart" then process.exit(0)
+        else
+          process
+            .on "restart", () =>
+              @restart()
 
-          .on "exit", () =>
-            logger.info "Process ##{process.pid} exiting"
+            .on "exit", () =>
+              logger.info "Process ##{process.pid} exiting"
 
-          .on "SIGHUP", () =>
-            logger.debug "Process ##{process.pid} got SIGHUP"
+            .on "SIGHUP", () =>
+              logger.debug "Process ##{process.pid} got SIGHUP"
 
-        unless process.platform is "win32" and @cluster.isMaster
-          process.on "SIGINT", () =>
-            logger.debug "Process ##{process.pid} got SIGINT"
+          unless process.platform is "win32" and @cluster.isMaster
+            process.on "SIGINT", () =>
+              logger.debug "Process ##{process.pid} got SIGINT"
 
       #process.on "uncaughtException", (e) ->
       #  logger.error "Uncaught Exception:", require("util").inspect e

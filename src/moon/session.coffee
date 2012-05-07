@@ -36,12 +36,7 @@ class Session
     # Create redis client
     redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
 
-    # If there's a password, use it
-    if @app.options.redis.pass
-      redisClient.auth @app.options.redis.pass, (err) ->
-        if err then logger.error("redis:", err)
-
-    # bind some events
+    # Bind some events
     redisClient
       .on "error", (err) ->
         if err.toString().match "ECONNREFUSED"
@@ -54,6 +49,11 @@ class Session
 
       .on "ready", () ->
         logger.info "redis: Ready to recieve commands"
+
+    # If there's a password, use it
+    if @app.options.redis.pass
+      redisClient.auth @app.options.redis.pass, (err) ->
+        if err then logger.error("redis:", err)
       
     # Create session store
     sessionStore = new RedisStore client: redisClient

@@ -3,6 +3,8 @@
 ###
 
 # Dependencies
+fs = require "fs"
+temp = require "temp"
 _ = require "underscore"
 http = require "http"
 connect = require "connect"
@@ -392,6 +394,17 @@ class Server
     @sockets.on "connection", (socket) =>
       @socketConnection socket
 
+    # Build socket.io.js and add to built-in assets
+    filename = @app.options.paths.assets + "/scripts/socket.io.js"
+    file = @sockets.static.has "/socket.io.js"
+    file.callback "/socket.io.js", (e, content) =>
+      temp.open "moon-socket.io-", (e, info) =>
+        fs.write info.fd, content.toString()
+        fs.close info.fd, (e) =>
+          @app.assets.add js: moon: [
+            # Socket.io client
+            info.path
+          ]
     @
 
 module.exports = Server
