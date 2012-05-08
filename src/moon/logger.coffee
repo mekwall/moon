@@ -63,17 +63,17 @@ module.exports = class Logger
   ###
     New line
   ###
-  newLine: (num=1) ->
+  newLine: ( num = 1 ) ->
     console.log _s.repeat "\n", num-1
 
   ###
     Log message
   ###
-  log: (message..., type) ->
+  log: ( message..., type ) ->
     index = levels.indexOf type
     return this if index > @level or not @enabled
     time = utils.timeString()
-    spacing = (loggers.reduce (a, b) -> a.length > b.length ? a : b).length + 1
+    spacing = (loggers.sort (a, b) -> return b.length - a.length )[0].length + 1
     if @env is "development"
       sp1 = _s.repeat(" ", spacing).split(" ").slice(@name.length).join(" ")
       sp2 = "      ".split(" ").slice(type.length).join(" ")
@@ -89,7 +89,7 @@ module.exports = class Logger
   ###
     Error handler
   ###
-  error: (message, error) ->
+  error: ( message, error ) ->
     if error and error.stack
       error = error.stack
       if @env is "development"
@@ -101,9 +101,9 @@ module.exports = class Logger
   ###
     Create methods for each level
   ###
-  levels.forEach (name) ->
+  levels.forEach ( name ) ->
     return if name is "log"
     return if name is "error"
     Logger::[name] = ->
-      @log.apply this, Array::slice.call(arguments).concat([ name ])
+      @log.apply this, Array::slice.call( arguments ).concat( [ name ] )
     return
