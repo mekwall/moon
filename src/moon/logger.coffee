@@ -79,7 +79,7 @@ module.exports = class Logger
       sp2 = "      ".split(" ").slice(type.length).join(" ")
       output = [ ("\ " + time + "").grey, "".grey + @name.white + sp1 + type[@colors[index]] + sp2 + ">".grey ].concat(message)
     else
-      output = [ ("\ " + time + ""), "" + @name + "." + type + " >" ].concat(message)
+      output = [ @name + "." + type + " >" ].concat(message)
     unless console[type]
       message = type
       type = "log"
