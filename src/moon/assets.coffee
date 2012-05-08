@@ -11,7 +11,6 @@ coffee = require "iced-coffee-script"
 styl = require "stylus"
 nib = require "nib"
 jade = require "jade"
-ck = require "coffeekup"
 sqwish = require "sqwish"
 csso = require "csso"
 uglifyjs = require "uglify-js"
@@ -53,12 +52,19 @@ decode = (path) ->
   An obj of default fileExtension: preprocessFunction pairs
   The preprocess function takes contents, [filename] and returns the preprocessed contents
 ###
-preprocessors =
-  # Coffee-script
-  ".coffee": (contents) ->
+module.exports.preprocessors = preprocessors = {}
+
+# Coffee-script
+try
+  coffee = require "iced-coffee-script"
+  preprocessors[".coffee"] = (contents) ->
     coffee.compile contents
-  # Stylus
-  ".styl": (contents, filename) ->
+
+# Stylus
+try
+  stylus = require "stylus"
+  nib = require "nib"
+  preprocessors[".styl"] = (contents, filename) ->
     styl(contents)
       .set("filename", filename)
       .use(nib())
@@ -72,13 +78,17 @@ preprocessors =
   An obj of default fileExtension: templateParserFunction pairs
   The templateParserFunction function takes contents, [filename] and returns the parsed contents
 ###
-#metamorph = 0
-templateParsers =
-  # Coffeekup
-  ".coffee": (contents, filename) ->
+module.exports.templateParsers = templateParsers = {}
+
+# Coffeekup
+try
+  ck = require "coffeekup"
+  templateParsers[".coffee"] = (contents, filename) ->
     ck.compile contents, locals: no
-  # Jade
-  ".jade": (contents, filename) ->
+
+# Jade
+try
+  templateParsers[".jade"] = (contents, filename) ->
     compiled = jade.compile contents, client: yes, compileDebug: no, filename: filename
     ###
     cmp = compiled.toString()
