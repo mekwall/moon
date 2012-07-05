@@ -1,4 +1,3 @@
-process.env.NODE_ENV = "production"
 /**
 * Moon.js Chat Example
 */

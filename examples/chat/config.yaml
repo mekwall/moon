@@ -2,6 +2,7 @@ production:
   cluster: false
   workers: 1
   redis:
+    enabled: false
     db: moon
     host: drum.redistogo.com
     port: 9200
@@ -11,4 +12,5 @@ development:
   cluster: true
   workers: 1
   redis:
+    enabled: false
     host: localhost
