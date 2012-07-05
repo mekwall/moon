@@ -5,11 +5,9 @@
 # Dependencies
 redis = require "redis"
 connect = require "connect"
-connectRedis = require "connect-redis"
 
 # Import classes
 Logger = require "./logger"
-RedisStore = connectRedis connect
 ConnectSession = connect.middleware.session
 
 ###
@@ -33,30 +31,41 @@ class Session
   ###
   init: ->
 
-    # Create redis client
-    redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
+    if @app.options.redis.enabled
 
-    # Bind some events
-    redisClient
-      .on "error", (err) ->
-        if err.toString().match "ECONNREFUSED"
-          logger.error "redis: Connection refused. Server down?"
-        else
-          logger.error "redis: Unknown error", err
+      connectRedis = require "connect-redis"
+      RedisStore = connectRedis connect
 
-      .on "end", () ->
-        logger.debug "redis: Connection closed"
+      # Create redis client
+      redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
 
-      .on "ready", () ->
-        logger.info "redis: Ready to recieve commands"
+      # Bind some events
+      redisClient
+        .on "error", (err) ->
+          if err.toString().match "ECONNREFUSED"
+            logger.error "redis: Connection refused. Server down?"
+          else
+            logger.error "redis: Unknown error", err
 
-    # If there's a password, use it
-    if @app.options.redis.pass
-      redisClient.auth @app.options.redis.pass, (err) ->
-        if err then logger.error("redis:", err)
-      
-    # Create session store
-    sessionStore = new RedisStore client: redisClient
+        .on "end", () ->
+          logger.debug "redis: Connection closed"
+
+        .on "ready", () ->
+          logger.info "redis: Ready to recieve commands"
+
+      # If there's a password, use it
+      if @app.options.redis.pass
+        redisClient.auth @app.options.redis.pass, (err) ->
+          if err then logger.error("redis:", err)
+
+      # Create session store
+      sessionStore = new RedisStore client: redisClient
+
+    else
+      # Borrow MemoryStore from connect
+      MemoryStore = connect.middleware.session.MemoryStore
+      # Create session store
+      sessionStore = new MemoryStore
 
   ###
     Middleware

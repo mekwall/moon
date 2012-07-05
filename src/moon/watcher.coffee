@@ -120,7 +120,7 @@ class Watcher
   tempCopy: (file) ->
     unless @tempFiles[file]
       @tempFiles[file] = path.normalize "#{tempPath}/" + crypto.createHash("md5").update(file).digest("hex")
-    require('fs-extra').copyFile file, @tempFiles[file], (err) -> {}
+    require('fs-extra').copy file, @tempFiles[file], (err) -> {}
     this
 
   watch: (cb) ->

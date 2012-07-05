@@ -10,15 +10,10 @@ http = require "http"
 connect = require "connect"
 httpProxy = require "http-proxy"
 io = require "socket.io"
-redis = require "redis"
-director = require "director"
+cookie = require "cookie"
 
 # Import classes
 Logger = require "./logger"
-
-# Import functions
-parseCookie = connect.utils.parseCookie
-parseSignedCookies = connect.utils.parseSignedCookies
 
 # apply some patches to response object
 # based on the connect patch
@@ -79,12 +74,12 @@ class Server
   socketLogger = new Logger "socket"
   redisLogger = new Logger "redis"
 
-  # Public varialbes
+  # Public variables
   app: null
   http: null
   sockets: null
   initialized: false
-  middleware: []
+  stack: []
   _sockets: {}
 
   ###
@@ -92,7 +87,7 @@ class Server
   ###
   constructor: (@app) ->
     @init()
-    @
+    return @
 
   ###
     Initialize
@@ -200,25 +195,30 @@ class Server
   ###
     Attach middlewares
   ###
-  use: (fn) ->
-    unless fn
-      logger.debug "Nothing was passed to use()"
-      @
+  use: (route, fn) ->
+    # default route to "/"
+    unless typeof route is "string"
+      fn = route
+      route = "/"
 
     # wrap sub-apps
     if typeof fn.handle is "function"
       server = fn
+      fn.route = route
       fn = (req, res, next) ->
         server.handle req, res, next
 
     # wrap vanilla http.Servers
     if fn instanceof http.Server
-      fn = fn.listeners('request')[0]
+      fn = fn.listeners("request")[0]
 
-    if typeof fn is "function"
-      logger.debug "Attached middleware:", fn.name || fn.constructor.name
-      @middleware.push fn
-    @
+    # strip trailing slash
+    if route[route.length - 1] is "/"
+      route = route.slice 0, -1
+
+    logger.debug "Attached middleware:", fn.name || fn.constructor.name
+    @stack.push { route: route, handle: fn }
+    return @
 
   ###
     Handle request
@@ -226,15 +226,30 @@ class Server
   handle: (req, res, out) ->
 
     env = @app.env
-    stack = @middleware
+    fqdn = ~req.url.indexOf "://"
+    stack = @stack
+    removed = ''
+    slashAdded = false
     idx = 0
 
-    next = (err=null) ->
-      # get next in stack
-      mw = stack[idx++]
+    #
+    req.originalUrl = req.originalUrl or req.url
+
+    next = (err) ->
+      if slashAdded
+        req.url = req.url.substr(1)
+        slashAdded = false
+
+      # put the prefix back on if it was removed
+      req.url = removed + req.url
+      req.originalUrl = req.originalUrl or req.url
+      removed = ''
+
+      # next callback
+      layer = stack[idx++]
 
       # no more in stack or headers sent
-      if !mw or res.headerSent
+      if !layer or res.headerSent
 
         # delegate to parent
         return out err if out
@@ -248,7 +263,7 @@ class Server
           # default to 500
           res.statusCode = 500 if res.statusCode < 400
           # log error
-          logger.error "HTTP error:", err
+          logger.debug "HTTP error:", err
           # set correct error status
           res.statusCode = err.status if err.status
           # production gets a basic error message
@@ -269,14 +284,46 @@ class Server
         res.end msg
         return
 
-      # no more in stack or headers sent
-      next err if err
-      # send to middleware
-      logger.debug "Sending "+req.url+" to " + (mw.name || mw.constructor.name)
-      mw req, res, next
+      try
+        path = connect.utils.parseUrl(req).pathname
+        path = "/" if path is undefined
+
+        # skip this layer if the route doesn't match.
+        if path.indexOf(layer.route) is not 0 then return next err
+
+        c = path[layer.route.length]
+        if c and c is not "/" and c is not '.' then return next err
+
+        # call the layer handler
+        # trim off the part of the url that matches the route
+        removed = layer.route
+        req.url = req.url.substr removed.length
+
+        # ensure leading slash
+        if not fqdn and req.url[0] is not "/"
+          req.url = "/" + req.url
+          slashAdded = true
+
+        # send to middleware
+        logger.debug "Sending " + req.url + " to " + (layer.handle.name || layer.handle.constructor.name || 'anonymous')
+        arity = layer.handle.length
+
+        # no more in stack or headers sent
+        if err
+          if arity == 4
+            layer.handle err, req, res, next
+          else
+            next err
+        else if arity < 4
+          layer.handle req, res, next
+        else
+          do next
+      catch e
+        next e
+
       return
 
-    next()
+    do next
 
 
   ###
@@ -299,62 +346,74 @@ class Server
     else if @spdy
       @spdy.listen @app.options.spdy.port or 3443, @app.options.spdy.host or null
     
-    # Create redis clients
-    subClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
-    redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
+    if @app.options.redis.enabled
+      redis = require "redis"
 
-    # Bind some events
-    subClient
-      .on "error", (err) ->
-        if err.toString().match "ECONNREFUSED"
-          socketLogger.error "redis: Connection refused. Server down?"
-        else
-          socketLogger.error "redis: Unknown error", err
+      # Create redis clients
+      subClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
+      redisClient = redis.createClient @app.options.redis.port, @app.options.redis.host, @app.options.redis
 
-      .on "end", ->
-        socketLogger.debug "redis: Connection closed"
+      # Bind some events
+      subClient
+        .on "error", (err) ->
+          if err.toString().match "ECONNREFUSED"
+            socketLogger.error "redis: Connection refused. Server down?"
+          else
+            socketLogger.error "redis: Unknown error", err
 
-      .on "ready", ->
-        socketLogger.info "redis: Ready to recieve commands"
+        .on "end", ->
+          socketLogger.debug "redis: Connection closed"
 
-    redisClient
-      .on "error", (err) ->
-        if err.toString().match "ECONNREFUSED"
-          socketLogger.error "redis: Connection refused. Server down?"
-        else
-          socketLogger.error "redis: Unknown error", err
+        .on "ready", ->
+          socketLogger.info "redis: Ready to recieve commands"
 
-      .on "end", ->
-        socketLogger.debug "redis: Connection closed"
+      redisClient
+        .on "error", (err) ->
+          if err.toString().match "ECONNREFUSED"
+            socketLogger.error "redis: Connection refused. Server down?"
+          else
+            socketLogger.error "redis: Unknown error", err
 
-      .on "ready", ->
-        socketLogger.info "redis: Ready to recieve commands"
+        .on "end", ->
+          socketLogger.debug "redis: Connection closed"
 
-    if @app.options.redis.pass
-      subClient.auth @app.options.redis.pass, (err) =>
-        if err then socketLogger.error "redis:", err
-      redisClient.auth @app.options.redis.pass, (err) =>
-        if err then socketLogger.error "redis:", err
+        .on "ready", ->
+          socketLogger.info "redis: Ready to recieve commands"
 
-    @socketStore = new io.RedisStore(
-      redisPub: redisClient,
-      redisSub: subClient,
-      redisClient: redisClient
-    )
+      if @app.options.redis.pass
+        subClient.auth @app.options.redis.pass, (err) =>
+          if err then socketLogger.error "redis:", err
+        redisClient.auth @app.options.redis.pass, (err) =>
+          if err then socketLogger.error "redis:", err
 
-    @sockets = io.listen @http,
-      store: @socketStore
-      resource: @app.options.sockets.resource || "/sio"
-      logger: logger
-      error: logger
-      "log level": 1
+      @socketStore = new io.RedisStore(
+        redisPub: redisClient,
+        redisSub: subClient,
+        redisClient: redisClient
+      )
+
+      @sockets = io.listen @http,
+        store: @socketStore
+        resource: @app.options.sockets.resource || "/sio"
+        logger: logger
+        error: logger
+        "log level": 1
+
+    else if @app.cluster
+      logger.warn "MemoryStore and clustering does not work together! Please enable Redis to share sessions."
+
+    if not @sockets
+      @sockets = io.listen @http,
+        resource: @app.options.sockets.resource || "/sio"
+        logger: logger
+        error: logger
+        "log level": 1
 
     secret = @app.options.cookies.secret
     @sockets.set "authorization", (data, response) =>
       if data.headers.cookie
-        data.cookie = parseCookie data.headers.cookie
-        data.cookie = parseSignedCookies data.cookie, secret
-        data.sessionID = data.cookie["moon.sid"]
+        data.cookie = (cookie.parse data.headers.cookie)["moon.sid"]
+        data.sessionID = connect.utils.parseSignedCookie data.cookie, secret
         socketLogger.debug "Handshake: ID:" + data.sessionID
         try
           @app.session.get data.sessionID, data, (session) ->
