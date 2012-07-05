@@ -1,6 +1,6 @@
 {
   "name": "moon",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "dependencies": {
     "coffee-script": {
       "version": "1.3.3"
