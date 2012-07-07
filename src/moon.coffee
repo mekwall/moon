@@ -289,28 +289,36 @@ class Application
       amount++
       while amount -= 1
         worker =  @cluster.fork()
-        @_workers++
-        @workers[worker.pid] = worker
+        # uniqueID is not set in pre v0.8
+        if not worker.uniqueID then worker.uniqueID = worker.pid
+        @_workers++ 
+        @workers[worker.uniqueID] = worker
 
-        # On worker death
-        @cluster.on "death", (worker) =>
-          message = "Worker ##{worker.pid} died"
-          if (!worker.refork) and (worker.exitCode > 0)
-            message += " with error: code " + worker.exitCode
+      # On worker exit
+      @cluster.on "exit", (worker) =>
+        message = "Worker ##{worker.uniqueID} died"
+        if (!worker.refork) and (worker.exitCode > 0)
+          message += " with error: code #{worker.exitCode}"
 
-          # Remove worker from master list
-          delete @workers[worker.pid]
+        # Remove worker from master list
+        delete @workers[worker.uniqueID]
 
-          if worker.refork or @env is "development"
-            worker = @cluster.fork()
-            @workers[worker.pid] = worker
-          else
-            @_workers--
-            logger.info message
+        if worker.refork or @env is "development"
+          worker = @cluster.fork()
+          @workers[worker.uniqueID] = worker
+        else
+          @_workers--
+          logger.info message
 
-          if @_workers is 0
-            logger.error "All workers are dead. Exiting."
-            process.exit 0
+        if @_workers is 0
+          logger.error "All workers are dead. Exiting."
+          process.exit 0
+
+      @cluster.on "online", (worker) =>
+        logger.debug "Worker ##{worker.uniqueID} came online"
+
+      @cluster.on "listening", (worker, listen) =>
+        logger.debug "Worker ##{worker.uniqueID}  is now listening on #{listen.address}:#{listen.port}"
 
       process.on "message", (msg) =>
         return unless msg.cmd
@@ -326,8 +334,10 @@ class Application
         if @cluster.isWorker
           process.on "message", (msg) =>
             switch msg.cmd
-              when "pushToSockets" then @server.pushToSockets msg.data
-              when "stop", "restart" then process.exit(0)
+              when "pushToSockets"
+                @server.pushToSockets msg.data
+              when "stop", "restart"
+                process.exit(0)
         else
           process
             .on "restart", () =>
