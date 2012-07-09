@@ -6,17 +6,36 @@ body
   padding: 50px 30px
 
 header
-  margin: 0
+  position: absolute
+  top: 0
+  left: 0
+  right: 0
+  z-index: 1000
   padding: 5px 30px
-  background: #000
-  color: #fff
-  border-radius: 15px
+  background: #eee
+  border-bottom: 1px solid #e1e1e1
+  box-shadow: 0 0 20px 20px #fff
 
   h1
-    margin-top: 1em
+    line-height: .5
+    font-size: .8
+
+footer
+  position: absolute
+  right: 0
+  left: 0
+  bottom: 0
+  z-index: 1000
+  background: #eee
+  border-top: 1px solid #e1e1e1
 
 #container
-  padding: 5px 30px
+  position: absolute
+  top: 70px
+  bottom: 45px
+  left: 0
+  right: 0
+  overflow: hidden
 
 h1
   margin: 0
@@ -32,7 +51,7 @@ h1
 #messages
   list-style: none
   padding: 0
-  margin: 10px 0
+  margin: 0
 
   li
     margin: 0
@@ -47,8 +66,6 @@ h1
     padding-right: 5px
 
 form
-  background: #eee
-  border-radius: 10px
   padding: 10px
 
 #hello
@@ -61,3 +78,42 @@ form
 input + input,
 input + button
   margin-left: .5em
+
+.scrollbar-content
+  position: absolute
+  bottom: 0px
+  right: 0px
+  left: 0px
+  overflow: hidden
+  max-height:100%
+
+.scrollbar-vertical
+  position: absolute
+  top: 0
+  bottom: 0
+  right: 0
+  width: 12px
+  border-radius: 5px
+
+.scrollbar-handle
+  position: absolute
+  width: 8px
+  margin: 2px
+  background: #ccc
+  border-radius: 5px
+  height: 40px
+  cursor: pointer
+  z-index: 3000
+
+#login
+  position: absolute
+  top: 0
+  bottom: 0
+  left: 0
+  right: 0
+  background: #fff
+  z-index: 9999
+  iframe
+    border: 0
+    height: 100%
+    width: 100%

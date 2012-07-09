@@ -14,7 +14,7 @@ module.exports = (app) ->
   app.routes "routes.coffee"
 
   # start app
-  app.start()
+  do app.start
 
   # only do the following if a worker
   if !app.options.cluster || app.cluster.isWorker
@@ -34,6 +34,20 @@ module.exports = (app) ->
       # client-side template bundles
       jst: base: "./views/client/chat-message.jade"
 
+    # auth
+    ###
+    everyauth.github
+      .entryPath("/auth/github")
+      .appId("5697ce8265bd9e96df17")
+      .appSecret("6f27d255afe257ed6468e568bb83658c75f39fb5")
+      .findOrCreateUser((session, accessToken, accessTokenExtra, githubUserMetadata) ->
+        # find or create user logic goes here
+      )
+      .redirectPath('/')
+
+    app.server.use everyauth.middleware()
+    ###
+
     # listen for new socket connections
     app.server.sockets.on "connection", (socket) ->
       socket.on "chat", (data) ->
@@ -46,5 +60,5 @@ module.exports = (app) ->
       global.messages = global.messages.reverse().splice(0, 100).reverse()
       # emit history
       socket.emit "chatHistory", messages
-  
+
   return app

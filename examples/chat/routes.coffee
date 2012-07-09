@@ -1,4 +1,4 @@
-module.exports =
+module.exports = (app) ->
   404: ->
     @render "error",
       error:

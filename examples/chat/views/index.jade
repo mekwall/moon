@@ -1,12 +1,15 @@
 extend layout
 
 block body
-  h1 Real-time Chat
-    small With persistent history
+  header
+    h1 Real-time Chat
+      small With persistent history
 
-  ul#messages(data-template-list="chat-message")
+  #container.scrollable-container
+    ul#messages(data-template-list="chat-message").scrollable
 
-  form
-    input(type="text", name="nick", placeholder="Nick", style="width: 80px")
-    input(type="text", name="message", placeholder="Enter message")
-    button Send
+  footer
+    form
+      input(type="text", name="nick", placeholder="Nick", style="width: 80px")
+      input(type="text", name="message", placeholder="Enter message")
+      button Send
