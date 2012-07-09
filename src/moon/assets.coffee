@@ -19,6 +19,7 @@ fileUtil = require "file"
 glob = require "glob"
 rimraf = require "rimraf"
 mime = require "mime"
+browserify = require "browserify"
 
 # Include functions
 {utils} = require "connect"
@@ -201,7 +202,6 @@ class Assets
         if matches.length
           @bundles[type][bundle] = matches
           logger.debug "Added assets:", matches.map((file)-> basename(file)).join(", ")
-
 
     # Add any javascript necessary for templates (like the jade runtime)
     for filename in _.flatten @bundles.jst

@@ -5,7 +5,6 @@
 # Dependencies
 fs = require "fs"
 path = require "path"
-colors = require "colors"
 utils = require "./moon/utils"
 director = require "director"
 jade = require "jade"
@@ -202,6 +201,8 @@ class Application
       if typeof routes is "string"
         try
           routes = require process.cwd() + "/" + routes
+          if typeof routes is "function"
+            routes = routes @
         catch e
           return logger.error "Could not load routes:", e
       @router.mount routes
