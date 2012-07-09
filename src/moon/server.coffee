@@ -104,6 +104,13 @@ class Server
 
       # HTTP
       @http = http.createServer (req, res) =>
+
+        unless @procotol
+          if req.https
+            req.protocol = "HTTPS"
+          else
+            req.protocol = "HTTP" 
+
         if @app.env is "development"
           logger.debug "#{req.protocol} request: #{req.method} #{req.url.bold}"
 
@@ -205,6 +212,7 @@ class Server
     if typeof fn.handle is "function"
       server = fn
       fn.route = route
+      fn.name = server.name || server.handle.name
       fn = (req, res, next) ->
         server.handle req, res, next
 
@@ -232,7 +240,7 @@ class Server
     slashAdded = false
     idx = 0
 
-    #
+    # set original url
     req.originalUrl = req.originalUrl or req.url
 
     next = (err) ->
@@ -335,9 +343,9 @@ class Server
     unless cb
       cb = () ->
         unless process.isMaster
-          logger.info("Process ##{process.pid} is listening")
+          logger.info "Process ##{process.pid} is listening"
         else unless cluster.restarted
-          logger.info("Worker ##{process.pid} is listening")
+          logger.info "Worker ##{process.pid} is listening"
 
     @http.listen @app.options.http.port or null, @app.options.http.host or null, cb or null
 
@@ -345,7 +353,7 @@ class Server
       @https.listen @app.options.https.port or 3443, @app.options.https.host or null
     else if @spdy
       @spdy.listen @app.options.spdy.port or 3443, @app.options.spdy.host or null
-    
+
     if @app.options.redis.enabled
       redis = require "redis"
 
@@ -395,7 +403,6 @@ class Server
       @sockets = io.listen @http,
         store: @socketStore
         resource: @app.options.sockets.resource || "/sio"
-        logger: logger
         error: logger
         "log level": 1
 
@@ -405,7 +412,6 @@ class Server
     if not @sockets
       @sockets = io.listen @http,
         resource: @app.options.sockets.resource || "/sio"
-        logger: logger
         error: logger
         "log level": 1
 

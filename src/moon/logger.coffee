@@ -5,7 +5,9 @@
 # Dependencies
 _s = require "underscore.string"
 utils = require "./utils"
+colors = require "colors"
 
+###
 try
   winston = require "winston"
   winston.addColors
@@ -15,7 +17,6 @@ try
       error: "red"
       debug: "yellow"
 
-  ###
   transport = new (winston.transports.Console)(
     colorize: true,
     prettyPrint: true,
@@ -30,7 +31,7 @@ try
     ]
 
   @logger.setLevels winston.config.npm.levels
-  ###
+###
 
 ###
   Logger
@@ -40,10 +41,6 @@ module.exports = class Logger
   # Private variables
   levels = [ "log", "error", "warn", "info", "debug" ]
   loggers = []
-
-  # Public variables
-  colors: [ "white", "red", "yellow", "green", "cyan" ]
-  level: 6
 
   ###
     Constructor
@@ -56,9 +53,14 @@ module.exports = class Logger
       @level = 6 if @env is "development"
       @level = 6 if @env is "test"
     else
-      @level = @opts.level
+      @level = @opts.level || 6
+
     @enabled = true
     @
+
+  # Public variables
+  colors: [ "white", "red", "yellow", "green", "cyan" ]
+  level: 6
 
   ###
     New line
